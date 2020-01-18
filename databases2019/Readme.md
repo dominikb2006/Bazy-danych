@@ -1,6 +1,6 @@
 # Stworzenie modeli w języku Python
 
-Aby stworzyć model tabeli w języku python należy zdefiniować klasę oraz poszczególne obiekty (kolumny w bazie).
+Aby stworzyć model tabeli w języku python należy zdefiniować klasę (Tabelę) oraz poszczególne obiekty (kolumny w bazie).
 Jak zaznaczono na przykładzie poniżej, gdzie 
 Category - nazwa tabeli
 category_id, category_name, etc. nazwy kolumn
@@ -27,8 +27,9 @@ Na podstawie wyżej wymienionych class robimy migrację do bazy danych Postgres
 
 
 # Widoki
-W widokach zamówień definiujemy poszczególne widoki, które wypełniamy oraz definiujemy warunki brzegowe, które następnie migrują do bazy danych.
-W order_form.is_valid() sprawdzamy, czy format danych się zgadza. A nastepnie przekazujemy w order = order_form.save(commit=False) informacje do modelu, a następnie /w order.save()/ do bazy danych.
+W Views definiujemy poszczególne elementy, które wypełniamy oraz definiujemy rodzaj elementu, długość maksymalna, null/not null, etc. które następnie migrują do bazy danych.
+Na początku importujemy model elementu z istniejącej bazy danych. /order=OrdersModel()/
+W order_form.is_valid() sprawdzamy, czy format danych się zgadza. A nastepnie przekazujemy w order = order_form.save(commit=False) informacje do modelu (nie do bazy), a następnie /w order.save()/ do bazy danych.
 ```python
 def make_order(request):
     order=OrdersModel()
@@ -40,9 +41,8 @@ def make_order(request):
             messages.success(request, f'Succesfully created new order no. {order.order_id}')
             return redirect('add_order_details/' + str(order.order_id) + '/')
 ```
-Poniżej kolejny przykład, który różni się od poprzedniego pobieraniem informacji z danych.
-W totalPrice wyliczana jest sumaryczna kwota za wszystkie produkty w zamówieniu. Jest to prosta pętla, która mnoży ilość elementów, zniżkę oraz cenę jednostkową. A następnie sumuje.
-W render system pobiera informacje z bazy danych, a w context przekazuje zmienne.
+Poniżej kolejny przykład.
+W totalPrice wyliczana jest sumaryczna kwota za wszystkie produkty w zamówieniu. Jest to pętla, która mnoży ilość elementów, zniżkę oraz cenę jednostkową każdego elementu, a następnie sumuje.
 ```python
 class order_detail(generic.DetailView):
         model = OrdersModel
@@ -59,9 +59,9 @@ class order_detail(generic.DetailView):
 ```
 Kolejny przykład poniżej, gdzie:
 1. wpierw definiujemy id zamówienia
-2.definiujemy id produktu
-3. pobieramy unit_price z tabeli
-4. -------------------||-------------------
+2. definiujemy id produktu
+3. pobieramy unit_price z tabeli Products zgodny z ID produktu
+4. Przyporządkowywujemy unit_price zamówieniowi
 5. definiujemy przedział discount
 6. oraz przekazujemy dane do Bazy danych
 ```python
@@ -80,14 +80,9 @@ W poniższym przykładzie jeszcze jest sposób ustanawiania kolejności po order
 
 # Northwind - Template - Orders
 Poniżej istnieje połączenie z wcześniej wymienionymi formami z wyświetlanymi elementami na hoście.
-{% - programowane elementy
-{{ - odwołanie do połaczeń
-Na przykład poniżej:
-```
-	form action - odpowiada za bezpieczeństwo
-```
-a {{ order_details_form.management_form }} odwołuje się do tego elementu w modelu
-submit - dodanie przycisku, który przesyła dane za pomocą POST
+
+W {{ order_details_form.management_form }} następuje odwołanie się do elementu w modelu
+submit - dodanie przycisku, który przesyła dane
 Przykład:
 ```html
 <div>
@@ -132,7 +127,7 @@ def generate_report(request):
 ```         
 
 # Tworzenie form
-Poniżej jest załączony przykład, w którym definiujemy formę make_order., która dziedziczy po ModelForm. W pętlach for następuje wyświetlenie elementów zamieszczonych w liście. W praktyce daje to funkcjonalność po kliknięciu na polu pokazaniu listy z elementami możliwymi do wybrania.
+Poniżej jest załączony przykład, w którym definiujemy formę make_order., która dziedziczy po ModelForm. Pierwsza pętla definiuje co ma zostać pokazane (w tym wypadku wszystkie pola). Druga pętla wymaga, aby wszystkie pola nie były puste.
 W klasie meta wybieramy jaki model /Orders/, jakie pola z modelu będą brane oraz poniżej w widget typ wyświetlania daty. 
 ```python
 class make_order_form(ModelForm):
@@ -156,7 +151,7 @@ class make_order_form(ModelForm):
                 'order_date': forms.DateInput(attrs=DATEPICKER)
             }
 ```
-Poniżej przykład też sposób filtrowania elementów typu DESC:
+Poniżej przykład sposobu filtrowania elementów typu DESC:
 ```python
             self.fields['product_id'].queryset = Products.objects.filter(discontinued=0)
 ```
